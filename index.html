@@ -1,0 +1,2071 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sistema de control de stock de piezas y electrodomésticos con gestión de relaciones entre componentes">
+  <title>StockFlow — Control de Piezas y Electrodomésticos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════════════════
+       DESIGN SYSTEM — CSS Custom Properties
+       ═══════════════════════════════════════════════════════ */
+    :root {
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-display: 'Outfit', var(--font-sans);
+
+      --bg-primary: #0a0e17;
+      --bg-secondary: #111827;
+      --bg-card: rgba(23, 31, 50, 0.65);
+      --bg-glass: rgba(17, 24, 39, 0.7);
+      --border-glass: rgba(255, 255, 255, 0.06);
+      --border-focus: rgba(99, 102, 241, 0.4);
+
+      --primary: #6366f1;
+      --primary-glow: rgba(99, 102, 241, 0.15);
+      --primary-hover: #4f46e5;
+      --secondary: #06b6d4;
+      --secondary-glow: rgba(6, 182, 212, 0.15);
+      --accent: #8b5cf6;
+      --accent-glow: rgba(139, 92, 246, 0.15);
+
+      --text-primary: #f3f4f6;
+      --text-secondary: #9ca3af;
+      --text-muted: #6b7280;
+
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.15);
+      --warning: #f59e0b;
+      --warning-glow: rgba(245, 158, 11, 0.15);
+      --danger: #ef4444;
+      --danger-glow: rgba(239, 68, 68, 0.15);
+      --info: #3b82f6;
+      --info-glow: rgba(59, 130, 246, 0.15);
+
+      --shadow-sm: 0 2px 8px -2px rgba(0, 0, 0, 0.5);
+      --shadow-md: 0 8px 24px -4px rgba(0, 0, 0, 0.6);
+      --shadow-lg: 0 16px 32px -8px rgba(0, 0, 0, 0.7);
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --transition-fast: 0.15s ease;
+      --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       RESET & BASE
+       ═══════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      background-image:
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.05) 0px, transparent 50%);
+      background-attachment: fixed;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: var(--font-display);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+    }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-primary); }
+    ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #374151; }
+
+    /* ═══════════════════════════════════════════════════════
+       LAYOUT
+       ═══════════════════════════════════════════════════════ */
+    .app-container { display: flex; min-height: 100vh; }
+
+    /* Sidebar */
+    .sidebar {
+      width: 280px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-glass);
+      padding: 2rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      z-index: 100;
+      transition: var(--transition-normal);
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 3rem;
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 800;
+    }
+
+    .sidebar-brand .brand-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+    }
+
+    .sidebar-brand-text {
+      background: linear-gradient(135deg, #ffffff 0%, var(--text-secondary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .sidebar-brand-text span {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .sidebar-menu { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.85rem 1rem;
+      color: var(--text-secondary);
+      text-decoration: none;
+      border-radius: var(--radius-sm);
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: var(--transition-fast);
+      cursor: pointer;
+      border: 1px solid transparent;
+      user-select: none;
+    }
+
+    .sidebar-link:hover { color: #ffffff; background: rgba(255, 255, 255, 0.03); }
+
+    .sidebar-link.active {
+      color: #ffffff;
+      background: var(--primary-glow);
+      border-color: rgba(99, 102, 241, 0.15);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.05);
+    }
+
+    .sidebar-section-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      padding: 1.25rem 1rem 0.5rem;
+      font-weight: 700;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-glass);
+    }
+
+    .sidebar-footer .version-info {
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      padding: 0.5rem;
+    }
+
+    /* Mobile header */
+    .mobile-header {
+      display: none;
+      padding: 1rem 1.25rem;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-glass);
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .mobile-header .brand-mini {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-family: var(--font-display); font-weight: 700; font-size: 1.1rem;
+    }
+
+    .hamburger {
+      background: transparent; border: none; color: white; cursor: pointer;
+      width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+      border-radius: var(--radius-sm);
+    }
+
+    .hamburger:hover { background: rgba(255,255,255,0.05); }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      padding: 2.5rem 3rem;
+      min-height: 100vh;
+      overflow-y: auto;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       COMPONENTS
+       ═══════════════════════════════════════════════════════ */
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-md);
+      transition: transform var(--transition-normal), border-color var(--transition-normal), box-shadow var(--transition-normal);
+    }
+
+    .card:hover {
+      border-color: rgba(99, 102, 241, 0.15);
+      box-shadow: var(--shadow-lg), 0 0 15px rgba(99, 102, 241, 0.03);
+    }
+
+    /* Page Header */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .page-header h1 { font-size: 2rem; font-family: var(--font-display); }
+    .page-header p { color: var(--text-secondary); font-size: 0.95rem; margin-top: 0.25rem; }
+
+    /* Stat Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card { display: flex; align-items: center; gap: 1.25rem; }
+
+    .stat-icon {
+      width: 48px; height: 48px;
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    .stat-details h3 {
+      font-size: 1.75rem; margin-bottom: 0.1rem;
+      font-family: var(--font-display);
+    }
+
+    .stat-details p { color: var(--text-secondary); font-size: 0.85rem; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.7rem 1.4rem;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      font-size: 0.9rem;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      border: 1px solid transparent;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
+      border-color: var(--border-glass);
+    }
+    .btn-secondary:hover { background: rgba(255, 255, 255, 0.08); }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: #f87171;
+    }
+    .btn-danger:hover { background: rgba(239, 68, 68, 0.2); }
+
+    .btn-success {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      color: #34d399;
+    }
+    .btn-success:hover { background: rgba(16, 185, 129, 0.22); }
+
+    .btn-sm { padding: 0.4rem 0.65rem; font-size: 0.8rem; }
+
+    .btn-icon {
+      width: 34px; height: 34px; padding: 0;
+      border-radius: var(--radius-sm);
+    }
+
+    .btn-group { display: inline-flex; gap: 0.5rem; }
+
+    /* Forms */
+    .form-group {
+      margin-bottom: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .form-group label {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .form-control {
+      background: rgba(17, 24, 39, 0.8);
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-sm);
+      color: #ffffff;
+      padding: 0.7rem 1rem;
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      transition: var(--transition-fast);
+      width: 100%;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .form-control::placeholder { color: var(--text-muted); }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    textarea.form-control { resize: vertical; min-height: 70px; }
+
+    /* Tables */
+    .table-container { overflow-x: auto; margin-top: 0.75rem; }
+
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+
+    th {
+      padding: 0.9rem 1rem;
+      font-weight: 600;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-glass);
+    }
+
+    td {
+      padding: 0.85rem 1rem;
+      font-size: 0.9rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      vertical-align: middle;
+    }
+
+    tr { transition: background var(--transition-fast); }
+    tr:hover td { background: rgba(255, 255, 255, 0.015); }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.2rem 0.55rem;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      gap: 0.3rem;
+    }
+
+    .badge-success { background: var(--success-glow); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
+    .badge-warning { background: var(--warning-glow); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
+    .badge-danger { background: var(--danger-glow); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
+    .badge-info { background: var(--info-glow); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); }
+    .badge-accent { background: var(--accent-glow); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.2); }
+
+    /* Filters Bar */
+    .filters-bar {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .search-wrapper {
+      flex: 1;
+      min-width: 220px;
+      position: relative;
+    }
+
+    .search-wrapper .search-icon {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      color: var(--text-muted); font-size: 1rem; pointer-events: none;
+    }
+
+    .search-wrapper input { padding-left: 2.5rem; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .modal-content {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-lg);
+      width: 92%;
+      max-width: 620px;
+      max-height: 88vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+      animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .modal-header {
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border-glass);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+
+    .modal-header h3 { font-size: 1.15rem; }
+
+    .modal-close {
+      background: transparent; border: none; color: var(--text-secondary);
+      cursor: pointer; transition: var(--transition-fast);
+      font-size: 1.4rem; line-height: 1; padding: 0.25rem;
+    }
+    .modal-close:hover { color: #ffffff; }
+
+    .modal-body { padding: 1.75rem 2rem; }
+    .modal-footer {
+      padding: 1.25rem 2rem;
+      border-top: 1px solid var(--border-glass);
+      display: flex; justify-content: flex-end; gap: 0.75rem;
+    }
+
+    /* Chip / tag (for linked parts) */
+    .chip {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      color: #a5b4fc;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      font-weight: 500;
+      margin: 0.15rem;
+      transition: var(--transition-fast);
+    }
+
+    .chip .chip-remove {
+      cursor: pointer;
+      color: rgba(255,255,255,0.4);
+      font-size: 0.85rem;
+      line-height: 1;
+      margin-left: 0.1rem;
+    }
+    .chip .chip-remove:hover { color: var(--danger); }
+
+    .chips-container { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.3rem; }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-secondary);
+    }
+
+    .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.5; }
+    .empty-state h4 { color: var(--text-primary); margin-bottom: 0.3rem; }
+
+    /* Toast */
+    .toast-container {
+      position: fixed;
+      top: 1.5rem;
+      right: 1.5rem;
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .toast {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem 1.25rem;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 280px;
+      animation: slideInRight 0.35s ease-out;
+      font-size: 0.9rem;
+    }
+
+    .toast.toast-success { border-left: 3px solid var(--success); }
+    .toast.toast-danger { border-left: 3px solid var(--danger); }
+    .toast.toast-info { border-left: 3px solid var(--info); }
+
+    .toast-icon { font-size: 1.1rem; }
+
+    /* Animations */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes slideInRight { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    .animate-in { animation: slideUp 0.4s ease-out; }
+
+    /* View section (hidden by default) */
+    .view-section { display: none; }
+    .view-section.active { display: block; animation: fadeIn 0.3s ease-out; }
+
+    /* Detail panel */
+    .detail-panel {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .detail-panel h4 { font-size: 0.95rem; margin-bottom: 0.75rem; }
+
+    .detail-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.4rem 0;
+      font-size: 0.85rem;
+    }
+
+    .detail-row .label { color: var(--text-secondary); }
+    .detail-row .value { font-weight: 600; }
+
+    /* Pieza usage indicator */
+    .usage-bar {
+      height: 6px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 3px;
+      overflow: hidden;
+      width: 60px;
+    }
+
+    .usage-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.5s ease;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border-glass);
+      margin-bottom: 1.5rem;
+    }
+
+    .tab-btn {
+      padding: 0.75rem 1.5rem;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: var(--transition-fast);
+    }
+
+    .tab-btn:hover { color: var(--text-primary); }
+
+    .tab-btn.active {
+      color: #ffffff;
+      border-bottom-color: var(--primary);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .mobile-header { display: flex; }
+      .sidebar {
+        position: fixed;
+        top: 57px;
+        bottom: 0;
+        left: -100%;
+        width: 280px;
+        height: calc(100vh - 57px);
+        transition: left 0.3s ease;
+        z-index: 200;
+      }
+      .sidebar.open { left: 0; }
+      .main-content { padding: 1.5rem; }
+      .page-header { flex-direction: column; align-items: flex-start; }
+      .form-row { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 480px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .main-content { padding: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- ═══ Mobile Header ═══ -->
+  <div class="mobile-header">
+    <div class="brand-mini">
+      <span>📦</span>
+      <span>StockFlow</span>
+    </div>
+    <button class="hamburger" onclick="toggleMobileMenu()" id="hamburger-btn">☰</button>
+  </div>
+
+  <!-- ═══ Sidebar ═══ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">📦</div>
+      <div class="sidebar-brand-text">Stock<span>Flow</span></div>
+    </div>
+
+    <nav>
+      <ul class="sidebar-menu">
+        <li>
+          <div class="sidebar-link active" data-view="dashboard" onclick="switchView('dashboard', this)">
+            <span>📊</span>
+            <span>Dashboard</span>
+          </div>
+        </li>
+        <li class="sidebar-section-label">Inventario</li>
+        <li>
+          <div class="sidebar-link" data-view="piezas" onclick="switchView('piezas', this)">
+            <span>🔧</span>
+            <span>Piezas / Repuestos</span>
+          </div>
+        </li>
+        <li>
+          <div class="sidebar-link" data-view="electrodomesticos" onclick="switchView('electrodomesticos', this)">
+            <span>🏠</span>
+            <span>Electrodomésticos</span>
+          </div>
+        </li>
+        <li class="sidebar-section-label">Operaciones</li>
+        <li>
+          <div class="sidebar-link" data-view="movimientos" onclick="switchView('movimientos', this)">
+            <span>📋</span>
+            <span>Movimientos</span>
+          </div>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="version-info">StockFlow v1.0 — Offline Mode</div>
+    </div>
+  </aside>
+
+  <!-- ═══ Main Content ═══ -->
+  <main class="main-content" id="main-content">
+
+    <!-- ━━━ DASHBOARD VIEW ━━━ -->
+    <section class="view-section active" id="view-dashboard">
+      <div class="page-header">
+        <div>
+          <h1>📊 Dashboard</h1>
+          <p>Resumen general de inventario de piezas y electrodomésticos</p>
+        </div>
+      </div>
+
+      <div class="stats-grid" id="dashboard-stats"></div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem;">
+        <!-- Alertas de stock bajo -->
+        <div class="card">
+          <h3 style="margin-bottom: 1rem; font-size: 1.05rem;">⚠️ Alertas de Stock Bajo</h3>
+          <div id="dashboard-alerts"></div>
+        </div>
+
+        <!-- Últimos movimientos -->
+        <div class="card">
+          <h3 style="margin-bottom: 1rem; font-size: 1.05rem;">📋 Últimos Movimientos</h3>
+          <div id="dashboard-recent-movs"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ━━━ PIEZAS VIEW ━━━ -->
+    <section class="view-section" id="view-piezas">
+      <div class="page-header">
+        <div>
+          <h1>🔧 Piezas / Repuestos</h1>
+          <p>Control de stock de piezas y componentes</p>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-secondary btn-sm" onclick="loadPiezas()">🔄</button>
+          <button class="btn btn-primary" onclick="openPiezaModal()">
+            ＋ Nueva Pieza
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="card" style="padding: 1rem; margin-bottom: 1.5rem;">
+        <div class="filters-bar" style="margin-bottom: 0;">
+          <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="form-control" placeholder="Buscar por código, nombre, marca..."
+                   id="piezas-search" oninput="filterPiezas()">
+          </div>
+          <select class="form-control" style="width: 180px;" id="piezas-cat-filter" onchange="filterPiezas()">
+            <option value="">Todas las categorías</option>
+          </select>
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--text-secondary); font-size: 0.85rem; white-space: nowrap;">
+            <input type="checkbox" id="piezas-low-stock" onchange="filterPiezas()" style="transform: scale(1.15);">
+            Solo stock bajo
+          </label>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="card">
+        <div class="table-container" id="piezas-table"></div>
+      </div>
+    </section>
+
+    <!-- ━━━ ELECTRODOMÉSTICOS VIEW ━━━ -->
+    <section class="view-section" id="view-electrodomesticos">
+      <div class="page-header">
+        <div>
+          <h1>🏠 Electrodomésticos</h1>
+          <p>Gestión de equipos y sus piezas asociadas</p>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-secondary btn-sm" onclick="loadElectrodomesticos()">🔄</button>
+          <button class="btn btn-primary" onclick="openElectroModal()">
+            ＋ Nuevo Electrodoméstico
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="card" style="padding: 1rem; margin-bottom: 1.5rem;">
+        <div class="filters-bar" style="margin-bottom: 0;">
+          <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="form-control" placeholder="Buscar por nombre, marca, modelo, ubicación..."
+                   id="electro-search" oninput="filterElectrodomesticos()">
+          </div>
+          <select class="form-control" style="width: 180px;" id="electro-status-filter" onchange="filterElectrodomesticos()">
+            <option value="">Todos los estados</option>
+            <option value="operativo">🟢 Operativo</option>
+            <option value="en_reparacion">🟡 En reparación</option>
+            <option value="fuera_servicio">🔴 Fuera de servicio</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="card">
+        <div class="table-container" id="electro-table"></div>
+      </div>
+    </section>
+
+    <!-- ━━━ MOVIMIENTOS VIEW ━━━ -->
+    <section class="view-section" id="view-movimientos">
+      <div class="page-header">
+        <div>
+          <h1>📋 Movimientos de Stock</h1>
+          <p>Historial de entradas, salidas y ajustes de inventario</p>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-secondary btn-sm" onclick="loadMovimientos()">🔄</button>
+          <button class="btn btn-primary" onclick="openMovimientoModal()">
+            ＋ Nuevo Movimiento
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="card" style="padding: 1rem; margin-bottom: 1.5rem;">
+        <div class="filters-bar" style="margin-bottom: 0;">
+          <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="form-control" placeholder="Buscar por pieza, motivo..."
+                   id="movs-search" oninput="filterMovimientos()">
+          </div>
+          <select class="form-control" style="width: 160px;" id="movs-type-filter" onchange="filterMovimientos()">
+            <option value="">Todos los tipos</option>
+            <option value="entrada">📥 Entrada</option>
+            <option value="salida">📤 Salida</option>
+            <option value="ajuste">🔄 Ajuste</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="card">
+        <div class="table-container" id="movs-table"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ═══ Modal Container (dynamically filled) ═══ -->
+<div id="modal-root"></div>
+
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   DATA LAYER — localStorage persistence
+   ═══════════════════════════════════════════════════════════ */
+
+const STORAGE_KEYS = {
+  piezas: 'sf_piezas',
+  electrodomesticos: 'sf_electrodomesticos',
+  movimientos: 'sf_movimientos',
+  categorias: 'sf_categorias',
+  idCounters: 'sf_id_counters'
+};
+
+function getStore(key) {
+  try { return JSON.parse(localStorage.getItem(key)) || []; }
+  catch { return []; }
+}
+
+function setStore(key, data) {
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+function getCounters() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.idCounters)) || { piezas: 0, electro: 0, movs: 0 }; }
+  catch { return { piezas: 0, electro: 0, movs: 0 }; }
+}
+
+function nextId(type) {
+  const c = getCounters();
+  c[type] = (c[type] || 0) + 1;
+  localStorage.setItem(STORAGE_KEYS.idCounters, JSON.stringify(c));
+  return c[type];
+}
+
+// ─── Seed Sample Data ─────────────────────────────────────
+function seedIfEmpty() {
+  if (getStore(STORAGE_KEYS.piezas).length > 0) return;
+
+  const categorias = [
+    { id: 'plomeria', nombre: 'Plomería', icono: '🔧' },
+    { id: 'electricidad', nombre: 'Electricidad', icono: '⚡' },
+    { id: 'ac', nombre: 'Aire Acondicionado', icono: '❄️' },
+    { id: 'cocina', nombre: 'Cocina', icono: '🍳' },
+    { id: 'calefones', nombre: 'Calefones', icono: '🔥' },
+    { id: 'cerrajeria', nombre: 'Cerrajería', icono: '🔑' },
+    { id: 'general', nombre: 'General', icono: '📦' },
+  ];
+  setStore(STORAGE_KEYS.categorias, categorias);
+
+  const piezas = [
+    { id: 1, sku: 'PLM-001', nombre: 'Llave de paso 1/2"', categoria: 'plomeria', marca: 'Truper', modelo: '', stock: 15, stockMin: 5, costo: 8.50, ubicacion: 'Estante A-1' },
+    { id: 2, sku: 'PLM-002', nombre: 'Codo PVC 1/2"', categoria: 'plomeria', marca: 'Amanco', modelo: '', stock: 50, stockMin: 20, costo: 1.20, ubicacion: 'Estante A-1' },
+    { id: 3, sku: 'PLM-003', nombre: 'Sifón para lavamanos', categoria: 'plomeria', marca: 'Helvex', modelo: 'S-100', stock: 8, stockMin: 3, costo: 12.00, ubicacion: 'Estante A-2' },
+    { id: 4, sku: 'PLM-004', nombre: 'Manguera flexible 60cm', categoria: 'plomeria', marca: 'Coflex', modelo: '', stock: 20, stockMin: 10, costo: 6.50, ubicacion: 'Estante A-2' },
+    { id: 5, sku: 'ELE-001', nombre: 'Interruptor sencillo', categoria: 'electricidad', marca: 'Bticino', modelo: 'Light', stock: 25, stockMin: 10, costo: 5.00, ubicacion: 'Estante B-1' },
+    { id: 6, sku: 'ELE-002', nombre: 'Tomacorriente doble', categoria: 'electricidad', marca: 'Bticino', modelo: 'Light', stock: 3, stockMin: 8, costo: 7.50, ubicacion: 'Estante B-1' },
+    { id: 7, sku: 'ELE-003', nombre: 'Foco LED 9W', categoria: 'electricidad', marca: 'Philips', modelo: 'Essential', stock: 40, stockMin: 15, costo: 3.50, ubicacion: 'Estante B-3' },
+    { id: 8, sku: 'AC-001', nombre: 'Filtro de aire 20x20', categoria: 'ac', marca: '3M', modelo: 'Filtrete', stock: 2, stockMin: 5, costo: 15.00, ubicacion: 'Estante C-1' },
+    { id: 9, sku: 'AC-002', nombre: 'Capacitor 35 MFD', categoria: 'ac', marca: 'GE', modelo: '', stock: 6, stockMin: 2, costo: 18.00, ubicacion: 'Estante C-1' },
+    { id: 10, sku: 'COC-001', nombre: 'Perilla de cocina universal', categoria: 'cocina', marca: 'Mabe', modelo: '', stock: 10, stockMin: 4, costo: 5.00, ubicacion: 'Estante D-1' },
+    { id: 11, sku: 'CAL-001', nombre: 'Termostato calefón', categoria: 'calefones', marca: 'Bosch', modelo: '', stock: 1, stockMin: 2, costo: 28.00, ubicacion: 'Estante D-2' },
+    { id: 12, sku: 'GEN-001', nombre: 'Silicón transparente', categoria: 'general', marca: '3M', modelo: '', stock: 10, stockMin: 4, costo: 7.50, ubicacion: 'Estante G-1' },
+  ];
+
+  const counters = { piezas: 12, electro: 5, movs: 4 };
+  localStorage.setItem(STORAGE_KEYS.idCounters, JSON.stringify(counters));
+
+  setStore(STORAGE_KEYS.piezas, piezas);
+
+  const electros = [
+    { id: 1, nombre: 'Aire Acondicionado Split 12000 BTU', marca: 'Samsung', modelo: 'AR12BVHQ', estado: 'operativo', ubicacion: 'Torre A - Depto 101', piezasIds: [8, 9], notas: 'Instalado en 2024' },
+    { id: 2, nombre: 'Cocina a Gas 4 hornillas', marca: 'Mabe', modelo: 'EM7640', estado: 'operativo', ubicacion: 'Torre A - Depto 203', piezasIds: [10], notas: '' },
+    { id: 3, nombre: 'Calefón 10 Litros', marca: 'Bosch', modelo: 'Therm 1000', estado: 'en_reparacion', ubicacion: 'Torre B - Depto 305', piezasIds: [11, 1], notas: 'Requiere cambio de termostato' },
+    { id: 4, nombre: 'Lavarropas Automático', marca: 'Whirlpool', modelo: 'WNQ76A', estado: 'operativo', ubicacion: 'Torre C - Depto 402', piezasIds: [4], notas: '' },
+    { id: 5, nombre: 'Aire Acondicionado Ventana', marca: 'LG', modelo: 'W122CM', estado: 'fuera_servicio', ubicacion: 'Torre B - Depto 101', piezasIds: [8, 9], notas: 'Compresor dañado' },
+  ];
+  setStore(STORAGE_KEYS.electrodomesticos, electros);
+
+  const movs = [
+    { id: 1, piezaId: 8, tipo: 'entrada', cantidad: 5, motivo: 'Compra inicial', notas: '', fecha: new Date(Date.now() - 86400000 * 7).toISOString() },
+    { id: 2, piezaId: 8, tipo: 'salida', cantidad: 3, motivo: 'Mantenimiento A/C Torre A', notas: 'Para electrodoméstico #1', fecha: new Date(Date.now() - 86400000 * 3).toISOString() },
+    { id: 3, piezaId: 6, tipo: 'salida', cantidad: 5, motivo: 'Reparaciones varias', notas: '', fecha: new Date(Date.now() - 86400000 * 2).toISOString() },
+    { id: 4, piezaId: 11, tipo: 'salida', cantidad: 1, motivo: 'Reparación calefón', notas: 'Para electrodoméstico #3', fecha: new Date(Date.now() - 86400000).toISOString() },
+  ];
+  setStore(STORAGE_KEYS.movimientos, movs);
+}
+
+seedIfEmpty();
+
+
+/* ═══════════════════════════════════════════════════════════
+   UTILITIES
+   ═══════════════════════════════════════════════════════════ */
+
+function getCategorias() {
+  return getStore(STORAGE_KEYS.categorias);
+}
+
+function getCatName(catId) {
+  const cat = getCategorias().find(c => c.id === catId);
+  return cat ? `${cat.icono} ${cat.nombre}` : catId;
+}
+
+function getCatIcon(catId) {
+  const cat = getCategorias().find(c => c.id === catId);
+  return cat ? cat.icono : '📦';
+}
+
+function formatDate(isoStr) {
+  if (!isoStr) return '—';
+  const d = new Date(isoStr);
+  return d.toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function formatDateShort(isoStr) {
+  if (!isoStr) return '—';
+  const d = new Date(isoStr);
+  return d.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' });
+}
+
+function showToast(message, type = 'success') {
+  const container = document.getElementById('toast-container');
+  const icons = { success: '✅', danger: '❌', info: 'ℹ️' };
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `<span class="toast-icon">${icons[type] || '✅'}</span><span>${message}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(60px)'; toast.style.transition = '0.3s ease'; }, 2800);
+  setTimeout(() => toast.remove(), 3200);
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+const estadoLabels = {
+  operativo: { label: 'Operativo', badge: 'badge-success', icon: '🟢' },
+  en_reparacion: { label: 'En reparación', badge: 'badge-warning', icon: '🟡' },
+  fuera_servicio: { label: 'Fuera de servicio', badge: 'badge-danger', icon: '🔴' },
+};
+
+const tipoLabels = {
+  entrada: { label: 'Entrada', badge: 'badge-success', icon: '📥' },
+  salida: { label: 'Salida', badge: 'badge-danger', icon: '📤' },
+  ajuste: { label: 'Ajuste', badge: 'badge-info', icon: '🔄' },
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   NAVIGATION
+   ═══════════════════════════════════════════════════════════ */
+
+function switchView(viewId, linkEl) {
+  // Hide all sections
+  document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+  // Show target
+  document.getElementById('view-' + viewId).classList.add('active');
+
+  // Update sidebar active
+  document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+  if (linkEl) linkEl.classList.add('active');
+
+  // Close mobile menu
+  document.getElementById('sidebar').classList.remove('open');
+
+  // Refresh data
+  if (viewId === 'dashboard') renderDashboard();
+  if (viewId === 'piezas') loadPiezas();
+  if (viewId === 'electrodomesticos') loadElectrodomesticos();
+  if (viewId === 'movimientos') loadMovimientos();
+}
+
+function toggleMobileMenu() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   DASHBOARD
+   ═══════════════════════════════════════════════════════════ */
+
+function renderDashboard() {
+  const piezas = getStore(STORAGE_KEYS.piezas);
+  const electros = getStore(STORAGE_KEYS.electrodomesticos);
+  const movs = getStore(STORAGE_KEYS.movimientos);
+
+  const totalPiezas = piezas.length;
+  const totalElectros = electros.length;
+  const bajoStock = piezas.filter(p => p.stock <= p.stockMin).length;
+  const valorTotal = piezas.reduce((sum, p) => sum + (p.stock * p.costo), 0);
+  const enReparacion = electros.filter(e => e.estado === 'en_reparacion').length;
+
+  document.getElementById('dashboard-stats').innerHTML = `
+    <div class="card stat-card animate-in">
+      <div class="stat-icon" style="background: var(--primary-glow); color: var(--primary);">🔧</div>
+      <div class="stat-details">
+        <h3>${totalPiezas}</h3>
+        <p>Tipos de Piezas</p>
+      </div>
+    </div>
+    <div class="card stat-card animate-in" style="animation-delay: 0.05s;">
+      <div class="stat-icon" style="background: var(--secondary-glow); color: var(--secondary);">🏠</div>
+      <div class="stat-details">
+        <h3>${totalElectros}</h3>
+        <p>Electrodomésticos</p>
+      </div>
+    </div>
+    <div class="card stat-card animate-in" style="animation-delay: 0.1s;">
+      <div class="stat-icon" style="background: ${bajoStock > 0 ? 'var(--danger-glow)' : 'var(--success-glow)'}; color: ${bajoStock > 0 ? 'var(--danger)' : 'var(--success)'};">⚠️</div>
+      <div class="stat-details">
+        <h3>${bajoStock}</h3>
+        <p>Stock Bajo / Crítico</p>
+      </div>
+    </div>
+    <div class="card stat-card animate-in" style="animation-delay: 0.15s;">
+      <div class="stat-icon" style="background: var(--accent-glow); color: var(--accent);">💰</div>
+      <div class="stat-details">
+        <h3>$${valorTotal.toFixed(2)}</h3>
+        <p>Valor del Inventario</p>
+      </div>
+    </div>
+  `;
+
+  // Alerts
+  const alertsContainer = document.getElementById('dashboard-alerts');
+  const lowItems = piezas.filter(p => p.stock <= p.stockMin).sort((a, b) => a.stock - b.stock);
+  if (lowItems.length === 0) {
+    alertsContainer.innerHTML = '<div class="empty-state" style="padding: 1.5rem;"><p>✅ Todo el inventario está sobre el mínimo</p></div>';
+  } else {
+    alertsContainer.innerHTML = lowItems.map(p => {
+      const pct = p.stockMin > 0 ? Math.min((p.stock / p.stockMin) * 100, 100) : 0;
+      const barColor = p.stock === 0 ? 'var(--danger)' : 'var(--warning)';
+      return `
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid rgba(255,255,255,0.03);">
+          <div>
+            <div style="font-weight: 600; font-size: 0.88rem;">${escapeHtml(p.nombre)}</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">${p.sku} · ${getCatName(p.categoria)}</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div class="usage-bar">
+              <div class="usage-bar-fill" style="width: ${pct}%; background: ${barColor};"></div>
+            </div>
+            <span class="badge ${p.stock === 0 ? 'badge-danger' : 'badge-warning'}" style="font-weight: 700;">${p.stock} / ${p.stockMin}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Recent movements
+  const recentContainer = document.getElementById('dashboard-recent-movs');
+  const recentMovs = [...movs].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 6);
+  if (recentMovs.length === 0) {
+    recentContainer.innerHTML = '<div class="empty-state" style="padding: 1.5rem;"><p>No hay movimientos registrados</p></div>';
+  } else {
+    recentContainer.innerHTML = recentMovs.map(m => {
+      const pieza = piezas.find(p => p.id === m.piezaId);
+      const tipo = tipoLabels[m.tipo] || { label: m.tipo, badge: 'badge-info', icon: '📋' };
+      return `
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0; border-bottom: 1px solid rgba(255,255,255,0.03);">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span style="font-size: 1.1rem;">${tipo.icon}</span>
+            <div>
+              <div style="font-size: 0.85rem; font-weight: 500;">${pieza ? escapeHtml(pieza.nombre) : 'Pieza eliminada'}</div>
+              <div style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(m.motivo)} · ${formatDateShort(m.fecha)}</div>
+            </div>
+          </div>
+          <span class="badge ${tipo.badge}" style="font-weight: 700;">${m.tipo === 'salida' ? '-' : '+'}${m.cantidad}</span>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   PIEZAS — CRUD
+   ═══════════════════════════════════════════════════════════ */
+
+function loadPiezas() {
+  // Populate category filter
+  const catSelect = document.getElementById('piezas-cat-filter');
+  const cats = getCategorias();
+  catSelect.innerHTML = '<option value="">Todas las categorías</option>' +
+    cats.map(c => `<option value="${c.id}">${c.icono} ${c.nombre}</option>`).join('');
+  filterPiezas();
+}
+
+function filterPiezas() {
+  const search = document.getElementById('piezas-search').value.toLowerCase();
+  const catFilter = document.getElementById('piezas-cat-filter').value;
+  const lowOnly = document.getElementById('piezas-low-stock').checked;
+
+  let piezas = getStore(STORAGE_KEYS.piezas);
+
+  if (search) {
+    piezas = piezas.filter(p =>
+      p.sku.toLowerCase().includes(search) ||
+      p.nombre.toLowerCase().includes(search) ||
+      p.marca.toLowerCase().includes(search) ||
+      p.modelo.toLowerCase().includes(search)
+    );
+  }
+  if (catFilter) piezas = piezas.filter(p => p.categoria === catFilter);
+  if (lowOnly) piezas = piezas.filter(p => p.stock <= p.stockMin);
+
+  renderPiezasTable(piezas);
+}
+
+function renderPiezasTable(piezas) {
+  const container = document.getElementById('piezas-table');
+
+  if (piezas.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🔧</div>
+        <h4>Sin resultados</h4>
+        <p>No se encontraron piezas con los filtros seleccionados</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Pieza / Especificación</th>
+          <th>Categoría</th>
+          <th>Stock</th>
+          <th>Costo Unit.</th>
+          <th>Ubicación</th>
+          <th style="text-align: right;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${piezas.map(p => {
+          const critico = p.stock <= p.stockMin;
+          const sinStock = p.stock === 0;
+          return `
+            <tr>
+              <td style="font-weight: 700; color: var(--secondary); font-size: 0.82rem;">${escapeHtml(p.sku)}</td>
+              <td>
+                <div style="font-weight: 600;">${escapeHtml(p.nombre)}</div>
+                <span style="font-size: 0.72rem; color: var(--text-muted);">
+                  ${p.marca ? 'Marca: ' + escapeHtml(p.marca) : ''}${p.modelo ? ' | Mod: ' + escapeHtml(p.modelo) : ''}
+                </span>
+              </td>
+              <td><span class="badge badge-info">${getCatName(p.categoria)}</span></td>
+              <td>
+                <span class="badge ${sinStock ? 'badge-danger' : critico ? 'badge-warning' : 'badge-success'}" style="font-weight: 700;">
+                  ${p.stock}
+                </span>
+                ${critico ? '<span style="margin-left: 0.3rem; color: ' + (sinStock ? 'var(--danger)' : 'var(--warning)') + ';" title="Stock bajo!">⚠️</span>' : ''}
+              </td>
+              <td style="font-weight: 500;">$${p.costo.toFixed(2)}</td>
+              <td>
+                <span style="font-size: 0.85rem; color: var(--text-secondary);">📍 ${escapeHtml(p.ubicacion || 'Sin ubicar')}</span>
+              </td>
+              <td style="text-align: right;">
+                <div class="btn-group">
+                  <button class="btn btn-success btn-sm" onclick="openQuickMov(${p.id})" title="Entrada/Salida rápida">📦</button>
+                  <button class="btn btn-secondary btn-sm" onclick="openPiezaModal(${p.id})" title="Editar">✏️</button>
+                  <button class="btn btn-danger btn-sm" onclick="deletePieza(${p.id})" title="Eliminar">🗑️</button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function openPiezaModal(id = null) {
+  const piezas = getStore(STORAGE_KEYS.piezas);
+  const pieza = id ? piezas.find(p => p.id === id) : null;
+  const cats = getCategorias();
+  const isEdit = !!pieza;
+
+  const modal = document.getElementById('modal-root');
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="event.target === this && closeModal()">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>${isEdit ? '✏️ Editar Pieza' : '🔧 Nueva Pieza'}</h3>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <form onsubmit="savePieza(event, ${id})">
+          <div class="modal-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Código SKU *</label>
+                <input type="text" class="form-control" id="f-sku" placeholder="Ej: PLM-009"
+                       value="${isEdit ? escapeHtml(pieza.sku) : ''}" required ${isEdit ? 'disabled' : ''}>
+              </div>
+              <div class="form-group">
+                <label>Categoría *</label>
+                <select class="form-control" id="f-cat" required>
+                  ${cats.map(c => `<option value="${c.id}" ${isEdit && pieza.categoria === c.id ? 'selected' : ''}>${c.icono} ${c.nombre}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Nombre de la pieza *</label>
+              <input type="text" class="form-control" id="f-nombre" placeholder="Ej: Mezcladora Monomando"
+                     value="${isEdit ? escapeHtml(pieza.nombre) : ''}" required>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Marca</label>
+                <input type="text" class="form-control" id="f-marca" placeholder="Ej: Helvex"
+                       value="${isEdit ? escapeHtml(pieza.marca) : ''}">
+              </div>
+              <div class="form-group">
+                <label>Modelo</label>
+                <input type="text" class="form-control" id="f-modelo" placeholder="Ej: Classic-200"
+                       value="${isEdit ? escapeHtml(pieza.modelo) : ''}">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Costo Unitario ($) *</label>
+                <input type="number" step="0.01" min="0" class="form-control" id="f-costo"
+                       value="${isEdit ? pieza.costo : '0'}" required>
+              </div>
+              <div class="form-group">
+                <label>Ubicación en Bodega</label>
+                <input type="text" class="form-control" id="f-ubicacion" placeholder="Ej: Estante A-3"
+                       value="${isEdit ? escapeHtml(pieza.ubicacion) : ''}">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Stock Mínimo (Alerta) *</label>
+                <input type="number" min="0" class="form-control" id="f-stockmin"
+                       value="${isEdit ? pieza.stockMin : '1'}" required>
+              </div>
+              ${!isEdit ? `
+              <div class="form-group">
+                <label>Stock Inicial</label>
+                <input type="number" min="0" class="form-control" id="f-stockinicial" value="0">
+              </div>` : ''}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+            <button type="submit" class="btn btn-primary">💾 Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+}
+
+function savePieza(e, editId) {
+  e.preventDefault();
+  const piezas = getStore(STORAGE_KEYS.piezas);
+
+  const sku = document.getElementById('f-sku').value.trim();
+  const nombre = document.getElementById('f-nombre').value.trim();
+  const categoria = document.getElementById('f-cat').value;
+  const marca = document.getElementById('f-marca').value.trim();
+  const modelo = document.getElementById('f-modelo').value.trim();
+  const costo = parseFloat(document.getElementById('f-costo').value) || 0;
+  const ubicacion = document.getElementById('f-ubicacion').value.trim();
+  const stockMin = parseInt(document.getElementById('f-stockmin').value) || 0;
+
+  if (editId) {
+    const idx = piezas.findIndex(p => p.id === editId);
+    if (idx >= 0) {
+      piezas[idx] = { ...piezas[idx], nombre, categoria, marca, modelo, costo, ubicacion, stockMin };
+    }
+    showToast('Pieza actualizada correctamente');
+  } else {
+    // Check duplicate SKU
+    if (piezas.some(p => p.sku.toLowerCase() === sku.toLowerCase())) {
+      showToast('Ya existe una pieza con ese código SKU', 'danger');
+      return;
+    }
+    const stockInicial = parseInt(document.getElementById('f-stockinicial').value) || 0;
+    piezas.push({
+      id: nextId('piezas'),
+      sku, nombre, categoria, marca, modelo,
+      stock: stockInicial, stockMin, costo, ubicacion
+    });
+    showToast('Pieza creada exitosamente');
+  }
+
+  setStore(STORAGE_KEYS.piezas, piezas);
+  closeModal();
+  filterPiezas();
+}
+
+function deletePieza(id) {
+  if (!confirm('¿Está seguro de eliminar esta pieza del inventario?')) return;
+  let piezas = getStore(STORAGE_KEYS.piezas);
+  piezas = piezas.filter(p => p.id !== id);
+  setStore(STORAGE_KEYS.piezas, piezas);
+  showToast('Pieza eliminada', 'info');
+  filterPiezas();
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   QUICK MOVEMENT (from piezas view)
+   ═══════════════════════════════════════════════════════════ */
+
+function openQuickMov(piezaId) {
+  const piezas = getStore(STORAGE_KEYS.piezas);
+  const pieza = piezas.find(p => p.id === piezaId);
+  if (!pieza) return;
+
+  const modal = document.getElementById('modal-root');
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="event.target === this && closeModal()">
+      <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+          <h3>📦 Entrada / Salida Rápida</h3>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <form onsubmit="saveQuickMov(event, ${pieza.id})">
+          <div class="modal-body">
+            <div class="detail-panel">
+              <div style="font-weight: 600; color: white;">${escapeHtml(pieza.nombre)}</div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.3rem;">
+                <span>SKU: ${escapeHtml(pieza.sku)}</span>
+                <span>Stock Actual: <strong style="color: white;">${pieza.stock}</strong></span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Tipo de Movimiento</label>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+                <button type="button" class="btn btn-primary btn-sm qm-type-btn" data-tipo="entrada" onclick="selectQmType('entrada')">📥 Entrada</button>
+                <button type="button" class="btn btn-secondary btn-sm qm-type-btn" data-tipo="salida" onclick="selectQmType('salida')">📤 Salida</button>
+                <button type="button" class="btn btn-secondary btn-sm qm-type-btn" data-tipo="ajuste" onclick="selectQmType('ajuste')">🔄 Ajuste</button>
+              </div>
+              <input type="hidden" id="qm-tipo" value="entrada">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label id="qm-cant-label">Cantidad</label>
+                <input type="number" min="1" class="form-control" id="qm-cantidad" value="1" required>
+              </div>
+              <div class="form-group">
+                <label>Motivo</label>
+                <input type="text" class="form-control" id="qm-motivo" value="Compra" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Notas</label>
+              <input type="text" class="form-control" id="qm-notas" placeholder="Detalles opcionales...">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+            <button type="submit" class="btn btn-primary">✅ Registrar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+}
+
+function selectQmType(tipo) {
+  document.getElementById('qm-tipo').value = tipo;
+  document.querySelectorAll('.qm-type-btn').forEach(b => {
+    b.className = b.dataset.tipo === tipo ? 'btn btn-primary btn-sm qm-type-btn' : 'btn btn-secondary btn-sm qm-type-btn';
+  });
+
+  const motivos = { entrada: 'Compra', salida: 'Uso en reparación', ajuste: 'Ajuste de inventario' };
+  document.getElementById('qm-motivo').value = motivos[tipo] || '';
+  document.getElementById('qm-cant-label').textContent = tipo === 'ajuste' ? 'Nuevo stock físico' : 'Cantidad';
+}
+
+function saveQuickMov(e, piezaId) {
+  e.preventDefault();
+  const tipo = document.getElementById('qm-tipo').value;
+  const cantidad = parseInt(document.getElementById('qm-cantidad').value) || 0;
+  const motivo = document.getElementById('qm-motivo').value.trim();
+  const notas = document.getElementById('qm-notas').value.trim();
+
+  if (cantidad <= 0) { showToast('La cantidad debe ser mayor a 0', 'danger'); return; }
+
+  let piezas = getStore(STORAGE_KEYS.piezas);
+  const idx = piezas.findIndex(p => p.id === piezaId);
+  if (idx < 0) return;
+
+  let movCantidad = cantidad;
+
+  if (tipo === 'entrada') {
+    piezas[idx].stock += cantidad;
+  } else if (tipo === 'salida') {
+    if (cantidad > piezas[idx].stock) {
+      showToast('No hay suficiente stock para esta salida', 'danger');
+      return;
+    }
+    piezas[idx].stock -= cantidad;
+  } else if (tipo === 'ajuste') {
+    movCantidad = Math.abs(cantidad - piezas[idx].stock);
+    piezas[idx].stock = cantidad;
+  }
+
+  setStore(STORAGE_KEYS.piezas, piezas);
+
+  // Log movement
+  const movs = getStore(STORAGE_KEYS.movimientos);
+  movs.push({
+    id: nextId('movs'),
+    piezaId,
+    tipo,
+    cantidad: movCantidad,
+    motivo,
+    notas,
+    fecha: new Date().toISOString()
+  });
+  setStore(STORAGE_KEYS.movimientos, movs);
+
+  closeModal();
+  showToast(`Movimiento de ${tipo} registrado`);
+  filterPiezas();
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   ELECTRODOMÉSTICOS — CRUD
+   ═══════════════════════════════════════════════════════════ */
+
+function loadElectrodomesticos() {
+  filterElectrodomesticos();
+}
+
+function filterElectrodomesticos() {
+  const search = document.getElementById('electro-search').value.toLowerCase();
+  const statusFilter = document.getElementById('electro-status-filter').value;
+
+  let electros = getStore(STORAGE_KEYS.electrodomesticos);
+
+  if (search) {
+    electros = electros.filter(e =>
+      e.nombre.toLowerCase().includes(search) ||
+      e.marca.toLowerCase().includes(search) ||
+      e.modelo.toLowerCase().includes(search) ||
+      e.ubicacion.toLowerCase().includes(search)
+    );
+  }
+  if (statusFilter) electros = electros.filter(e => e.estado === statusFilter);
+
+  renderElectroTable(electros);
+}
+
+function renderElectroTable(electros) {
+  const container = document.getElementById('electro-table');
+  const piezas = getStore(STORAGE_KEYS.piezas);
+
+  if (electros.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🏠</div>
+        <h4>Sin resultados</h4>
+        <p>No se encontraron electrodomésticos</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Equipo</th>
+          <th>Marca / Modelo</th>
+          <th>Estado</th>
+          <th>Ubicación</th>
+          <th>Piezas Asociadas</th>
+          <th style="text-align: right;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${electros.map(e => {
+          const est = estadoLabels[e.estado] || { label: e.estado, badge: 'badge-info', icon: '⚪' };
+          const linkedPiezas = (e.piezasIds || []).map(pid => piezas.find(p => p.id === pid)).filter(Boolean);
+          return `
+            <tr>
+              <td style="font-weight: 600;">${escapeHtml(e.nombre)}</td>
+              <td>
+                <span style="font-weight: 500;">${escapeHtml(e.marca)}</span>
+                <span style="color: var(--text-muted); font-size: 0.82rem;"> ${escapeHtml(e.modelo)}</span>
+              </td>
+              <td><span class="badge ${est.badge}">${est.icon} ${est.label}</span></td>
+              <td style="font-size: 0.85rem; color: var(--text-secondary);">📍 ${escapeHtml(e.ubicacion)}</td>
+              <td>
+                <div class="chips-container">
+                  ${linkedPiezas.length > 0
+                    ? linkedPiezas.map(p => `<span class="chip" title="Stock: ${p.stock}">${getCatIcon(p.categoria)} ${escapeHtml(p.nombre)} <span class="badge ${p.stock <= p.stockMin ? 'badge-warning' : 'badge-success'}" style="font-size: 0.65rem; padding: 0.1rem 0.35rem; margin-left: 0.2rem;">${p.stock}</span></span>`).join('')
+                    : '<span style="color: var(--text-muted); font-size: 0.82rem;">Sin piezas</span>'
+                  }
+                </div>
+              </td>
+              <td style="text-align: right;">
+                <div class="btn-group">
+                  <button class="btn btn-secondary btn-sm" onclick="viewElectroDetail(${e.id})" title="Ver detalle">👁️</button>
+                  <button class="btn btn-secondary btn-sm" onclick="openElectroModal(${e.id})" title="Editar">✏️</button>
+                  <button class="btn btn-danger btn-sm" onclick="deleteElectro(${e.id})" title="Eliminar">🗑️</button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function openElectroModal(id = null) {
+  const electros = getStore(STORAGE_KEYS.electrodomesticos);
+  const electro = id ? electros.find(e => e.id === id) : null;
+  const piezas = getStore(STORAGE_KEYS.piezas);
+  const isEdit = !!electro;
+
+  const selectedIds = isEdit ? [...(electro.piezasIds || [])] : [];
+
+  const modal = document.getElementById('modal-root');
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="event.target === this && closeModal()">
+      <div class="modal-content" style="max-width: 650px;">
+        <div class="modal-header">
+          <h3>${isEdit ? '✏️ Editar Electrodoméstico' : '🏠 Nuevo Electrodoméstico'}</h3>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <form onsubmit="saveElectro(event, ${id})">
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Nombre del equipo *</label>
+              <input type="text" class="form-control" id="fe-nombre" placeholder="Ej: Aire Acondicionado Split 12000 BTU"
+                     value="${isEdit ? escapeHtml(electro.nombre) : ''}" required>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Marca *</label>
+                <input type="text" class="form-control" id="fe-marca" placeholder="Ej: Samsung"
+                       value="${isEdit ? escapeHtml(electro.marca) : ''}" required>
+              </div>
+              <div class="form-group">
+                <label>Modelo</label>
+                <input type="text" class="form-control" id="fe-modelo" placeholder="Ej: AR12BVHQ"
+                       value="${isEdit ? escapeHtml(electro.modelo) : ''}">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Estado</label>
+                <select class="form-control" id="fe-estado">
+                  <option value="operativo" ${isEdit && electro.estado === 'operativo' ? 'selected' : ''}>🟢 Operativo</option>
+                  <option value="en_reparacion" ${isEdit && electro.estado === 'en_reparacion' ? 'selected' : ''}>🟡 En reparación</option>
+                  <option value="fuera_servicio" ${isEdit && electro.estado === 'fuera_servicio' ? 'selected' : ''}>🔴 Fuera de servicio</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Ubicación *</label>
+                <input type="text" class="form-control" id="fe-ubicacion" placeholder="Ej: Torre A - Depto 101"
+                       value="${isEdit ? escapeHtml(electro.ubicacion) : ''}" required>
+              </div>
+            </div>
+
+            <!-- Piezas asociadas -->
+            <div class="form-group">
+              <label>Piezas que utiliza este equipo</label>
+              <div id="fe-piezas-chips" class="chips-container" style="min-height: 32px; padding: 0.3rem; background: rgba(0,0,0,0.2); border-radius: var(--radius-sm); border: 1px solid var(--border-glass);">
+                ${selectedIds.map(pid => {
+                  const p = piezas.find(pp => pp.id === pid);
+                  return p ? `<span class="chip" data-pid="${p.id}">${getCatIcon(p.categoria)} ${escapeHtml(p.nombre)} <span class="chip-remove" onclick="removeElectroChip(${p.id})">✕</span></span>` : '';
+                }).join('')}
+              </div>
+              <div style="position: relative; margin-top: 0.5rem;">
+                <input type="text" class="form-control" id="fe-piezas-search" placeholder="Buscar pieza para agregar..."
+                       oninput="searchPiezasForElectro()" onfocus="searchPiezasForElectro()" autocomplete="off">
+                <div id="fe-piezas-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; max-height: 180px; overflow-y: auto; background: var(--bg-secondary); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); z-index: 10; margin-top: 4px;"></div>
+              </div>
+              <input type="hidden" id="fe-piezas-ids" value='${JSON.stringify(selectedIds)}'>
+            </div>
+
+            <div class="form-group">
+              <label>Notas</label>
+              <textarea class="form-control" id="fe-notas" rows="2" placeholder="Observaciones del equipo...">${isEdit ? escapeHtml(electro.notas || '') : ''}</textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+            <button type="submit" class="btn btn-primary">💾 Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+
+  // Close dropdown when clicking outside
+  setTimeout(() => {
+    document.querySelector('.modal-overlay').addEventListener('click', (ev) => {
+      if (!ev.target.closest('#fe-piezas-search') && !ev.target.closest('#fe-piezas-dropdown')) {
+        document.getElementById('fe-piezas-dropdown').style.display = 'none';
+      }
+    });
+  }, 100);
+}
+
+function searchPiezasForElectro() {
+  const search = document.getElementById('fe-piezas-search').value.toLowerCase();
+  const piezas = getStore(STORAGE_KEYS.piezas);
+  const selectedIds = JSON.parse(document.getElementById('fe-piezas-ids').value || '[]');
+
+  const filtered = piezas.filter(p =>
+    !selectedIds.includes(p.id) &&
+    (p.nombre.toLowerCase().includes(search) || p.sku.toLowerCase().includes(search) || p.marca.toLowerCase().includes(search))
+  ).slice(0, 8);
+
+  const dropdown = document.getElementById('fe-piezas-dropdown');
+  if (filtered.length === 0) {
+    dropdown.innerHTML = '<div style="padding: 0.75rem; color: var(--text-muted); font-size: 0.85rem;">No se encontraron piezas</div>';
+  } else {
+    dropdown.innerHTML = filtered.map(p => `
+      <div style="padding: 0.6rem 0.85rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.1s;"
+           onmouseenter="this.style.background='rgba(255,255,255,0.04)'"
+           onmouseleave="this.style.background='transparent'"
+           onclick="addElectroChip(${p.id})">
+        <div>
+          <span style="font-size: 0.88rem;">${getCatIcon(p.categoria)} ${escapeHtml(p.nombre)}</span>
+          <span style="font-size: 0.72rem; color: var(--text-muted); margin-left: 0.5rem;">${escapeHtml(p.sku)}</span>
+        </div>
+        <span class="badge ${p.stock <= p.stockMin ? 'badge-warning' : 'badge-success'}" style="font-size: 0.68rem;">Stock: ${p.stock}</span>
+      </div>
+    `).join('');
+  }
+  dropdown.style.display = 'block';
+}
+
+function addElectroChip(piezaId) {
+  const piezas = getStore(STORAGE_KEYS.piezas);
+  const p = piezas.find(pp => pp.id === piezaId);
+  if (!p) return;
+
+  const selectedIds = JSON.parse(document.getElementById('fe-piezas-ids').value || '[]');
+  if (selectedIds.includes(piezaId)) return;
+
+  selectedIds.push(piezaId);
+  document.getElementById('fe-piezas-ids').value = JSON.stringify(selectedIds);
+
+  const chipsContainer = document.getElementById('fe-piezas-chips');
+  const chip = document.createElement('span');
+  chip.className = 'chip';
+  chip.dataset.pid = piezaId;
+  chip.innerHTML = `${getCatIcon(p.categoria)} ${escapeHtml(p.nombre)} <span class="chip-remove" onclick="removeElectroChip(${piezaId})">✕</span>`;
+  chipsContainer.appendChild(chip);
+
+  document.getElementById('fe-piezas-search').value = '';
+  document.getElementById('fe-piezas-dropdown').style.display = 'none';
+}
+
+function removeElectroChip(piezaId) {
+  let selectedIds = JSON.parse(document.getElementById('fe-piezas-ids').value || '[]');
+  selectedIds = selectedIds.filter(id => id !== piezaId);
+  document.getElementById('fe-piezas-ids').value = JSON.stringify(selectedIds);
+
+  const chip = document.querySelector(`#fe-piezas-chips .chip[data-pid="${piezaId}"]`);
+  if (chip) chip.remove();
+}
+
+function saveElectro(e, editId) {
+  e.preventDefault();
+  const electros = getStore(STORAGE_KEYS.electrodomesticos);
+
+  const nombre = document.getElementById('fe-nombre').value.trim();
+  const marca = document.getElementById('fe-marca').value.trim();
+  const modelo = document.getElementById('fe-modelo').value.trim();
+  const estado = document.getElementById('fe-estado').value;
+  const ubicacion = document.getElementById('fe-ubicacion').value.trim();
+  const notas = document.getElementById('fe-notas').value.trim();
+  const piezasIds = JSON.parse(document.getElementById('fe-piezas-ids').value || '[]');
+
+  if (editId) {
+    const idx = electros.findIndex(el => el.id === editId);
+    if (idx >= 0) {
+      electros[idx] = { ...electros[idx], nombre, marca, modelo, estado, ubicacion, piezasIds, notas };
+    }
+    showToast('Electrodoméstico actualizado');
+  } else {
+    electros.push({
+      id: nextId('electro'),
+      nombre, marca, modelo, estado, ubicacion, piezasIds, notas
+    });
+    showToast('Electrodoméstico creado exitosamente');
+  }
+
+  setStore(STORAGE_KEYS.electrodomesticos, electros);
+  closeModal();
+  filterElectrodomesticos();
+}
+
+function deleteElectro(id) {
+  if (!confirm('¿Está seguro de eliminar este electrodoméstico?')) return;
+  let electros = getStore(STORAGE_KEYS.electrodomesticos);
+  electros = electros.filter(e => e.id !== id);
+  setStore(STORAGE_KEYS.electrodomesticos, electros);
+  showToast('Electrodoméstico eliminado', 'info');
+  filterElectrodomesticos();
+}
+
+function viewElectroDetail(id) {
+  const electros = getStore(STORAGE_KEYS.electrodomesticos);
+  const electro = electros.find(e => e.id === id);
+  if (!electro) return;
+
+  const piezas = getStore(STORAGE_KEYS.piezas);
+  const linkedPiezas = (electro.piezasIds || []).map(pid => piezas.find(p => p.id === pid)).filter(Boolean);
+  const est = estadoLabels[electro.estado] || { label: electro.estado, badge: 'badge-info', icon: '⚪' };
+
+  // Find movements related to this electro's piezas
+  const movs = getStore(STORAGE_KEYS.movimientos);
+  const relatedMovs = movs.filter(m => (electro.piezasIds || []).includes(m.piezaId))
+    .sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 5);
+
+  const modal = document.getElementById('modal-root');
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="event.target === this && closeModal()">
+      <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+          <h3>🏠 ${escapeHtml(electro.nombre)}</h3>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="detail-panel">
+            <div class="detail-row">
+              <span class="label">Marca / Modelo</span>
+              <span class="value">${escapeHtml(electro.marca)} ${escapeHtml(electro.modelo)}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Estado</span>
+              <span class="badge ${est.badge}">${est.icon} ${est.label}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Ubicación</span>
+              <span class="value">📍 ${escapeHtml(electro.ubicacion)}</span>
+            </div>
+            ${electro.notas ? `<div class="detail-row"><span class="label">Notas</span><span class="value" style="font-weight: 400; color: var(--text-secondary);">${escapeHtml(electro.notas)}</span></div>` : ''}
+          </div>
+
+          <h4 style="margin: 1.25rem 0 0.75rem; font-size: 0.95rem;">🔧 Piezas que utiliza (${linkedPiezas.length})</h4>
+          ${linkedPiezas.length === 0
+            ? '<p style="color: var(--text-muted); font-size: 0.85rem;">No tiene piezas asociadas</p>'
+            : `<div class="table-container"><table>
+                <thead><tr><th>SKU</th><th>Pieza</th><th>Stock</th><th>Costo</th></tr></thead>
+                <tbody>
+                  ${linkedPiezas.map(p => {
+                    const critico = p.stock <= p.stockMin;
+                    return `<tr>
+                      <td style="color: var(--secondary); font-weight: 600; font-size: 0.82rem;">${escapeHtml(p.sku)}</td>
+                      <td>${escapeHtml(p.nombre)}</td>
+                      <td><span class="badge ${p.stock === 0 ? 'badge-danger' : critico ? 'badge-warning' : 'badge-success'}" style="font-weight: 700;">${p.stock}</span>${critico ? ' ⚠️' : ''}</td>
+                      <td>$${p.costo.toFixed(2)}</td>
+                    </tr>`;
+                  }).join('')}
+                </tbody>
+              </table></div>`
+          }
+
+          ${relatedMovs.length > 0 ? `
+            <h4 style="margin: 1.5rem 0 0.75rem; font-size: 0.95rem;">📋 Últimos movimientos de sus piezas</h4>
+            ${relatedMovs.map(m => {
+              const pieza = piezas.find(p => p.id === m.piezaId);
+              const tipo = tipoLabels[m.tipo] || { label: m.tipo, badge: 'badge-info', icon: '📋' };
+              return `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 0.85rem;">
+                  <span>${tipo.icon} ${pieza ? escapeHtml(pieza.nombre) : '?'} — ${escapeHtml(m.motivo)}</span>
+                  <span class="badge ${tipo.badge}">${m.tipo === 'salida' ? '-' : '+'}${m.cantidad}</span>
+                </div>
+              `;
+            }).join('')}
+          ` : ''}
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>
+          <button class="btn btn-primary" onclick="closeModal(); openElectroModal(${id});">✏️ Editar</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   MOVIMIENTOS — CRUD & VIEW
+   ═══════════════════════════════════════════════════════════ */
+
+function loadMovimientos() {
+  filterMovimientos();
+}
+
+function filterMovimientos() {
+  const search = document.getElementById('movs-search').value.toLowerCase();
+  const typeFilter = document.getElementById('movs-type-filter').value;
+
+  let movs = getStore(STORAGE_KEYS.movimientos);
+  const piezas = getStore(STORAGE_KEYS.piezas);
+
+  if (search) {
+    movs = movs.filter(m => {
+      const pieza = piezas.find(p => p.id === m.piezaId);
+      const piezaName = pieza ? pieza.nombre.toLowerCase() : '';
+      return piezaName.includes(search) || m.motivo.toLowerCase().includes(search);
+    });
+  }
+  if (typeFilter) movs = movs.filter(m => m.tipo === typeFilter);
+
+  // Sort by date desc
+  movs.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+  renderMovimientosTable(movs, piezas);
+}
+
+function renderMovimientosTable(movs, piezas) {
+  const container = document.getElementById('movs-table');
+
+  if (movs.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <h4>Sin movimientos</h4>
+        <p>No se encontraron movimientos con los filtros seleccionados</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Tipo</th>
+          <th>Pieza</th>
+          <th>Cantidad</th>
+          <th>Motivo</th>
+          <th>Notas</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${movs.map(m => {
+          const pieza = piezas.find(p => p.id === m.piezaId);
+          const tipo = tipoLabels[m.tipo] || { label: m.tipo, badge: 'badge-info', icon: '📋' };
+          return `
+            <tr>
+              <td style="font-size: 0.82rem; color: var(--text-secondary); white-space: nowrap;">${formatDate(m.fecha)}</td>
+              <td><span class="badge ${tipo.badge}">${tipo.icon} ${tipo.label}</span></td>
+              <td>
+                <div style="font-weight: 500;">${pieza ? escapeHtml(pieza.nombre) : '<span style="color: var(--text-muted);">Pieza eliminada</span>'}</div>
+                ${pieza ? `<span style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(pieza.sku)}</span>` : ''}
+              </td>
+              <td>
+                <span style="font-weight: 700; color: ${m.tipo === 'salida' ? 'var(--danger)' : m.tipo === 'entrada' ? 'var(--success)' : 'var(--info)'};">
+                  ${m.tipo === 'salida' ? '-' : '+'}${m.cantidad}
+                </span>
+              </td>
+              <td style="font-size: 0.88rem;">${escapeHtml(m.motivo)}</td>
+              <td style="font-size: 0.82rem; color: var(--text-muted);">${escapeHtml(m.notas || '—')}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function openMovimientoModal() {
+  const piezas = getStore(STORAGE_KEYS.piezas);
+
+  const modal = document.getElementById('modal-root');
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="event.target === this && closeModal()">
+      <div class="modal-content" style="max-width: 520px;">
+        <div class="modal-header">
+          <h3>📦 Nuevo Movimiento de Stock</h3>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <form onsubmit="saveMovimiento(event)">
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Pieza *</label>
+              <select class="form-control" id="fm-pieza" required>
+                <option value="">— Seleccionar pieza —</option>
+                ${piezas.map(p => `<option value="${p.id}">${escapeHtml(p.sku)} — ${escapeHtml(p.nombre)} (Stock: ${p.stock})</option>`).join('')}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Tipo de Movimiento</label>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+                <button type="button" class="btn btn-primary btn-sm fm-type-btn" data-tipo="entrada" onclick="selectFmType('entrada')">📥 Entrada</button>
+                <button type="button" class="btn btn-secondary btn-sm fm-type-btn" data-tipo="salida" onclick="selectFmType('salida')">📤 Salida</button>
+                <button type="button" class="btn btn-secondary btn-sm fm-type-btn" data-tipo="ajuste" onclick="selectFmType('ajuste')">🔄 Ajuste</button>
+              </div>
+              <input type="hidden" id="fm-tipo" value="entrada">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Cantidad *</label>
+                <input type="number" min="1" class="form-control" id="fm-cantidad" value="1" required>
+              </div>
+              <div class="form-group">
+                <label>Motivo *</label>
+                <input type="text" class="form-control" id="fm-motivo" value="Compra" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Notas</label>
+              <input type="text" class="form-control" id="fm-notas" placeholder="Detalles opcionales...">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+            <button type="submit" class="btn btn-primary">✅ Registrar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+}
+
+function selectFmType(tipo) {
+  document.getElementById('fm-tipo').value = tipo;
+  document.querySelectorAll('.fm-type-btn').forEach(b => {
+    b.className = b.dataset.tipo === tipo ? 'btn btn-primary btn-sm fm-type-btn' : 'btn btn-secondary btn-sm fm-type-btn';
+  });
+  const motivos = { entrada: 'Compra', salida: 'Uso en reparación', ajuste: 'Ajuste de inventario' };
+  document.getElementById('fm-motivo').value = motivos[tipo] || '';
+}
+
+function saveMovimiento(e) {
+  e.preventDefault();
+  const piezaId = parseInt(document.getElementById('fm-pieza').value);
+  const tipo = document.getElementById('fm-tipo').value;
+  const cantidad = parseInt(document.getElementById('fm-cantidad').value) || 0;
+  const motivo = document.getElementById('fm-motivo').value.trim();
+  const notas = document.getElementById('fm-notas').value.trim();
+
+  if (!piezaId) { showToast('Seleccione una pieza', 'danger'); return; }
+  if (cantidad <= 0) { showToast('La cantidad debe ser mayor a 0', 'danger'); return; }
+
+  let piezas = getStore(STORAGE_KEYS.piezas);
+  const idx = piezas.findIndex(p => p.id === piezaId);
+  if (idx < 0) { showToast('Pieza no encontrada', 'danger'); return; }
+
+  let movCantidad = cantidad;
+
+  if (tipo === 'entrada') {
+    piezas[idx].stock += cantidad;
+  } else if (tipo === 'salida') {
+    if (cantidad > piezas[idx].stock) {
+      showToast('No hay suficiente stock para esta salida', 'danger');
+      return;
+    }
+    piezas[idx].stock -= cantidad;
+  } else if (tipo === 'ajuste') {
+    movCantidad = Math.abs(cantidad - piezas[idx].stock);
+    piezas[idx].stock = cantidad;
+  }
+
+  setStore(STORAGE_KEYS.piezas, piezas);
+
+  const movs = getStore(STORAGE_KEYS.movimientos);
+  movs.push({
+    id: nextId('movs'),
+    piezaId,
+    tipo,
+    cantidad: movCantidad,
+    motivo,
+    notas,
+    fecha: new Date().toISOString()
+  });
+  setStore(STORAGE_KEYS.movimientos, movs);
+
+  closeModal();
+  showToast(`Movimiento de ${tipo} registrado`);
+  filterMovimientos();
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   MODAL HELPER
+   ═══════════════════════════════════════════════════════════ */
+
+function closeModal() {
+  document.getElementById('modal-root').innerHTML = '';
+}
+
+// Close modal on Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeModal();
+});
+
+
+/* ═══════════════════════════════════════════════════════════
+   INITIAL RENDER
+   ═══════════════════════════════════════════════════════════ */
+
+renderDashboard();
+
+</script>
+</body>
+</html>
