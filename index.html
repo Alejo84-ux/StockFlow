@@ -87,7 +87,7 @@
 
     /* ═══════════════════════════════════════════════════════
        LAYOUT
-       ═══════════════════════════════════════════════════════    /* Page Layout */
+       ═══════════════════════════════════════════════════════ */
     .app-container { display: flex; min-height: 100vh; position: relative; width: 100%; overflow-x: hidden; }
 
     /* Sidebar */
@@ -103,6 +103,7 @@
       height: 100vh;
       z-index: 100;
       transition: var(--transition-normal);
+      flex-shrink: 0;
     }
 
     .sidebar-brand {
