@@ -88,108 +88,18 @@
     /* ═══════════════════════════════════════════════════════
        LAYOUT
        ═══════════════════════════════════════════════════════ */
-    .app-container { display: flex; min-height: 100vh; position: relative; width: 100%; overflow-x: hidden; }
-
-    /* Sidebar */
-    .sidebar {
-      width: 280px;
-      background: var(--bg-secondary);
-      border-right: 1px solid var(--border-glass);
-      padding: 2rem 1.5rem;
+    .app-container {
       display: flex;
       flex-direction: column;
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      z-index: 100;
-      transition: var(--transition-normal);
-      flex-shrink: 0;
-    }
-
-    .sidebar-brand {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 3rem;
-      font-family: var(--font-display);
-      font-size: 1.25rem;
-      font-weight: 800;
-    }
-
-    .sidebar-brand .brand-icon {
-      width: 36px; height: 36px;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-      border-radius: var(--radius-sm);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.1rem;
-    }
-
-    .sidebar-brand-text {
-      background: linear-gradient(135deg, #ffffff 0%, var(--text-secondary) 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .sidebar-brand-text span {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .sidebar-menu { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
-
-    .sidebar-link {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 0.85rem 1rem;
-      color: var(--text-secondary);
-      text-decoration: none;
-      border-radius: var(--radius-sm);
-      font-weight: 500;
-      font-size: 0.95rem;
-      transition: var(--transition-fast);
-      cursor: pointer;
-      border: 1px solid transparent;
-      user-select: none;
-    }
-
-    .sidebar-link:hover { color: #ffffff; background: rgba(255, 255, 255, 0.03); }
-
-    .sidebar-link.active {
-      color: #ffffff;
-      background: var(--primary-glow);
-      border-color: rgba(99, 102, 241, 0.15);
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.05);
-    }
-
-    .sidebar-section-label {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-muted);
-      padding: 1.25rem 1rem 0.5rem;
-      font-weight: 700;
-    }
-
-    .sidebar-footer {
-      margin-top: auto;
-      padding-top: 1.5rem;
-      border-top: 1px solid var(--border-glass);
-    }
-
-    .sidebar-footer .version-info {
-      text-align: center;
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      padding: 0.5rem;
+      min-height: 100vh;
+      position: relative;
+      width: 100%;
+      overflow-x: hidden;
     }
 
     /* Mobile header — app-style top bar */
     .mobile-header {
-      display: none;
+      display: flex;
       padding: 0.75rem 1.25rem;
       background: rgba(17, 24, 39, 0.92);
       backdrop-filter: blur(16px);
@@ -214,12 +124,15 @@
       letter-spacing: 0.02em;
     }
 
-    /* Main Content */
+    /* Main Content (now takes full width, spacing corrected for bottom nav) */
     .main-content {
       flex: 1;
-      padding: 2.5rem 3rem;
-      min-height: 100vh;
+      padding: 2rem 1.5rem 6.5rem 1.5rem;
+      min-height: calc(100vh - 56px);
       overflow-y: auto;
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
     }
 
     /* ═══════════════════════════════════════════════════════
@@ -637,9 +550,9 @@
     }
     .sidebar-overlay.active { display: block; }
 
-    /* ═══ Bottom Navigation Bar (mobile app style) ═══ */
+    /* ═══ Bottom Navigation Bar (app style) ═══ */
     .bottom-nav {
-      display: none; /* hidden on desktop */
+      display: block; /* always visible */
       position: fixed;
       bottom: 0;
       left: 0;
@@ -708,13 +621,14 @@
 
     /* ═══ Responsive — MOBILE APP MODE ═══ */
     @media (max-width: 768px) {
+      /* Stack header and main content vertically instead of side-by-side */
+      .app-container {
+        flex-direction: column !important;
+      }
+
       /* Show mobile header & bottom nav */
       .mobile-header { display: flex !important; }
       .bottom-nav { display: block !important; }
-
-      /* HIDE sidebar completely — no drawer, no rectangle */
-      .sidebar { display: none !important; }
-      .sidebar-overlay { display: none !important; }
 
       /* Main content takes full width, padded for top header + bottom nav */
       .main-content {
@@ -799,52 +713,6 @@
     </div>
     <span class="mobile-page-title" id="mobile-page-title">Dashboard</span>
   </div>
-
-  <!-- ═══ Sidebar Overlay (desktop drawer fallback) ═══ -->
-  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeMobileMenu()"></div>
-
-  <!-- ═══ Sidebar ═══ -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-brand">
-      <div class="brand-icon">📦</div>
-      <div class="sidebar-brand-text">Stock<span>Flow</span></div>
-    </div>
-
-    <nav>
-      <ul class="sidebar-menu">
-        <li>
-          <div class="sidebar-link active" data-view="dashboard" onclick="switchView('dashboard', this)">
-            <span>📊</span>
-            <span>Dashboard</span>
-          </div>
-        </li>
-        <li class="sidebar-section-label">Inventario</li>
-        <li>
-          <div class="sidebar-link" data-view="piezas" onclick="switchView('piezas', this)">
-            <span>🔧</span>
-            <span>Piezas / Repuestos</span>
-          </div>
-        </li>
-        <li>
-          <div class="sidebar-link" data-view="electrodomesticos" onclick="switchView('electrodomesticos', this)">
-            <span>🏠</span>
-            <span>Electrodomésticos</span>
-          </div>
-        </li>
-        <li class="sidebar-section-label">Operaciones</li>
-        <li>
-          <div class="sidebar-link" data-view="movimientos" onclick="switchView('movimientos', this)">
-            <span>📋</span>
-            <span>Movimientos</span>
-          </div>
-        </li>
-      </ul>
-    </nav>
-
-    <div class="sidebar-footer">
-      <div class="version-info">StockFlow v1.0 — Offline Mode</div>
-    </div>
-  </aside>
 
   <!-- ═══ Main Content ═══ -->
   <main class="main-content" id="main-content">
@@ -993,22 +861,22 @@
   </main>
 </div>
 
-<!-- ═══ Bottom Navigation Bar (mobile only) ═══ -->
+<!-- ═══ Bottom Navigation Bar ═══ -->
 <nav class="bottom-nav" id="bottom-nav">
   <div class="bottom-nav-inner">
-    <button class="bottom-nav-item active" data-view="dashboard" onclick="switchViewMobile('dashboard', this)">
+    <button class="bottom-nav-item active" data-view="dashboard" onclick="switchView('dashboard', this)">
       <span class="nav-icon">📊</span>
       <span>Inicio</span>
     </button>
-    <button class="bottom-nav-item" data-view="piezas" onclick="switchViewMobile('piezas', this)">
+    <button class="bottom-nav-item" data-view="piezas" onclick="switchView('piezas', this)">
       <span class="nav-icon">🔧</span>
       <span>Piezas</span>
     </button>
-    <button class="bottom-nav-item" data-view="electrodomesticos" onclick="switchViewMobile('electrodomesticos', this)">
+    <button class="bottom-nav-item" data-view="electrodomesticos" onclick="switchView('electrodomesticos', this)">
       <span class="nav-icon">🏠</span>
       <span>Equipos</span>
     </button>
-    <button class="bottom-nav-item" data-view="movimientos" onclick="switchViewMobile('movimientos', this)">
+    <button class="bottom-nav-item" data-view="movimientos" onclick="switchView('movimientos', this)">
       <span class="nav-icon">📋</span>
       <span>Movimientos</span>
     </button>
@@ -1183,27 +1051,26 @@ const pageTitles = {
   movimientos: 'Movimientos'
 };
 
-function switchView(viewId, linkEl) {
+function switchView(viewId, btnEl) {
   // Hide all sections
   document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
   // Show target
   document.getElementById('view-' + viewId).classList.add('active');
 
-  // Update sidebar active (desktop)
-  document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-  if (linkEl) linkEl.classList.add('active');
-
-  // Update bottom nav active (mobile)
+  // Update bottom nav active item
   document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
-  const navItem = document.querySelector(`.bottom-nav-item[data-view="${viewId}"]`);
-  if (navItem) navItem.classList.add('active');
+  
+  let targetBtn = btnEl;
+  if (!targetBtn) {
+    targetBtn = document.querySelector(`.bottom-nav-item[data-view="${viewId}"]`);
+  }
+  if (targetBtn) {
+    targetBtn.classList.add('active');
+  }
 
   // Update mobile header title
   const titleEl = document.getElementById('mobile-page-title');
   if (titleEl) titleEl.textContent = pageTitles[viewId] || viewId;
-
-  // Close mobile menu (if ever opened from desktop)
-  closeMobileMenu();
 
   // Refresh data
   if (viewId === 'dashboard') renderDashboard();
@@ -1213,32 +1080,6 @@ function switchView(viewId, linkEl) {
 
   // Scroll to top on view switch
   window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function switchViewMobile(viewId, btnEl) {
-  switchView(viewId, null);
-  // Ensure bottom nav highlights the right item
-  document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
-  if (btnEl) btnEl.classList.add('active');
-}
-
-function toggleMobileMenu() {
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('sidebar-overlay');
-  const isOpen = sidebar.classList.toggle('open');
-  if (isOpen) {
-    overlay.classList.add('active');
-    document.body.style.overflow = 'hidden';
-  } else {
-    overlay.classList.remove('active');
-    document.body.style.overflow = '';
-  }
-}
-
-function closeMobileMenu() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('sidebar-overlay').classList.remove('active');
-  document.body.style.overflow = '';
 }
 
 
